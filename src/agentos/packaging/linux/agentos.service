@@ -1,0 +1,23 @@
+# systemd unit for the AgentOS server (console + local node). Module M8.
+# Install: sudo ./install.sh   (or copy to /etc/systemd/system/ and: systemctl enable --now agentos)
+[Unit]
+Description=AgentOS server (console + local node)
+Documentation=https://github.com/agentos/agentos
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=AGENTOS_LISTEN=:7800
+EnvironmentFile=-/etc/default/agentos
+ExecStart=/usr/local/bin/agentos server --data /var/lib/agentos
+Restart=on-failure
+RestartSec=5
+# agents are children of the node; stop them together with the service
+KillMode=mixed
+TimeoutStopSec=30
+LimitNOFILE=65536
+User=root
+
+[Install]
+WantedBy=multi-user.target

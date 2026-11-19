@@ -1,0 +1,1246 @@
+{
+  "version": 1,
+  "stacks": [
+    {
+      "id": "linux-desktop",
+      "name": "Linux 桌面",
+      "name_en": "Linux desktop",
+      "category": "base",
+      "icon": "desktop",
+      "color": "#0EA5E9",
+      "languages": [
+        "desktop"
+      ],
+      "description": "轻量 XFCE 桌面 + Xvfb/x11vnc（与 Agent OS 内嵌桌面兼容）。适合无图形界面的 Linux 虚拟电脑/SSH/容器。",
+      "description_en": "Lightweight XFCE desktop plus Xvfb/x11vnc (compatible with Agent OS embedded desktop). For headless Linux VMs, SSH hosts, and containers.",
+      "homepage": "https://www.xfce.org/",
+      "sources": [
+        "https://packages.debian.org/xfce4",
+        "https://packages.debian.org/x11vnc",
+        "https://github.com/LibVNC/x11vnc"
+      ],
+      "detect": {
+        "posix": "command -v x11vnc >/dev/null && command -v Xvfb >/dev/null && (command -v startxfce4 >/dev/null || command -v xfce4-session >/dev/null || command -v fluxbox >/dev/null)",
+        "windows": "Write-Host 'Windows 自带桌面'; exit 0"
+      },
+      "setup": {
+        "linux": [
+          "$SUDO apt-get update -y",
+          "$SUDO apt-get install -y --no-install-recommends xfce4 xfce4-terminal xvfb x11vnc xterm xdotool dbus-x11 || $SUDO apt-get install -y --no-install-recommends fluxbox xvfb x11vnc xterm xdotool",
+          "mkdir -p \"$HOME/.agentos/vdesk\"",
+          "echo 'Linux 桌面组件已安装。打开环境「桌面」页签即可使用（Docker 无桌面镜像会自动启用按需虚拟桌面）。'"
+        ],
+        "alpine": [
+          "$SUDO apk add --no-cache xfce4 xfce4-terminal xvfb x11vnc xterm xdotool dbus || $SUDO apk add --no-cache fluxbox xvfb x11vnc xterm xdotool",
+          "mkdir -p \"$HOME/.agentos/vdesk\"",
+          "echo 'Linux 桌面组件已安装。打开环境「桌面」页签即可使用（Docker 无桌面镜像会自动启用按需虚拟桌面）。'"
+        ],
+        "rhel": [
+          "$SUDO dnf install -y @xfce-desktop-environment xorg-x11-server-Xvfb x11vnc xterm xdotool || $SUDO dnf install -y fluxbox xorg-x11-server-Xvfb x11vnc xterm xdotool",
+          "mkdir -p \"$HOME/.agentos/vdesk\"",
+          "echo 'Linux 桌面组件已安装。打开环境「桌面」页签即可使用（Docker 无桌面镜像会自动启用按需虚拟桌面）。'"
+        ],
+        "darwin": [
+          "echo 'macOS 自带图形桌面。如需 X11 应用可: brew install --cask xquartz'",
+          "command -v brew >/dev/null 2>&1 && brew list --cask xquartz >/dev/null 2>&1 || brew install --cask xquartz || true"
+        ],
+        "windows": [
+          "Write-Host 'Windows 虚拟电脑已自带桌面。可用系统远程桌面 (mstsc) 或 Agent OS 桌面页签。'",
+          "try { Set-ItemProperty -Path 'HKLM:\\System\\CurrentControlSet\\Control\\Terminal Server' -Name fDenyTSConnections -Value 0 -ErrorAction SilentlyContinue; Enable-NetFirewallRule -DisplayGroup 'Remote Desktop' -ErrorAction SilentlyContinue; Write-Host '已尝试启用远程桌面' } catch { Write-Host '跳过远程桌面启用（需管理员）' }"
+        ]
+      },
+      "docker_image": "localhost/agentos-desktop:0.1.20",
+      "env_vars": [],
+      "notes": "默认 XFCE；若软件源无 XFCE 则回退 fluxbox。安装到 Docker 无桌面容器后自动启用 virtual_desktop，打开「桌面」页签即可使用 VNC。",
+      "agent_templates": [
+        {
+          "id": "desktop-check",
+          "name": "检查桌面组件",
+          "name_en": "Check desktop packages",
+          "command": [
+            "sh",
+            "-c",
+            "command -v x11vnc; command -v Xvfb; command -v startxfce4 || command -v fluxbox; echo OK"
+          ],
+          "command_windows": [
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            "Write-Host 'Windows desktop OK'"
+          ],
+          "env": {},
+          "work_dir": "~"
+        }
+      ]
+    },
+    {
+      "id": "openssh",
+      "name": "OpenSSH 服务",
+      "name_en": "OpenSSH server",
+      "category": "base",
+      "icon": "terminal",
+      "color": "#22C55E",
+      "languages": [
+        "ssh"
+      ],
+      "description": "安装并启用 OpenSSH 服务，便于终端、文件与桌面隧道。默认允许密钥登录。",
+      "description_en": "Install and enable OpenSSH server for terminal, files, and desktop tunnels. Key-based login preferred.",
+      "homepage": "https://www.openssh.com/",
+      "sources": [
+        "https://packages.debian.org/openssh-server",
+        "https://learn.microsoft.com/windows-server/administration/openssh/openssh_install_firstuse"
+      ],
+      "detect": {
+        "posix": "{ command -v sshd >/dev/null || test -x /usr/sbin/sshd; } && (ss -ltn 2>/dev/null | grep -qE ':22([[:space:]]|$)' || netstat -ltn 2>/dev/null | grep -qE ':22([[:space:]]|$)' || pgrep -x sshd >/dev/null)",
+        "windows": "Get-Service sshd -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Running' } | Out-Null; if (-not $?) { exit 1 }; 'OpenSSH running'"
+      },
+      "setup": {
+        "linux": [
+          "$SUDO apt-get update -y && $SUDO apt-get install -y --no-install-recommends openssh-server",
+          "$SUDO mkdir -p /var/run/sshd /etc/ssh",
+          "if [ ! -f /etc/ssh/ssh_host_rsa_key ] && [ ! -f /etc/ssh/ssh_host_ed25519_key ]; then $SUDO ssh-keygen -A; fi",
+          "$SUDO systemctl enable --now ssh 2>/dev/null || $SUDO systemctl enable --now sshd 2>/dev/null || $SUDO service ssh start 2>/dev/null || $SUDO service sshd start 2>/dev/null || $SUDO /usr/sbin/sshd",
+          "pgrep -x sshd >/dev/null || { echo 'sshd 未能启动' >&2; exit 1; }",
+          "echo 'OpenSSH 已安装/启用。'"
+        ],
+        "alpine": [
+          "$SUDO apk add --no-cache openssh",
+          "$SUDO mkdir -p /var/run/sshd",
+          "if [ ! -f /etc/ssh/ssh_host_rsa_key ] && [ ! -f /etc/ssh/ssh_host_ed25519_key ]; then $SUDO ssh-keygen -A; fi",
+          "$SUDO rc-update add sshd default 2>/dev/null || true",
+          "$SUDO service sshd start 2>/dev/null || $SUDO /usr/sbin/sshd",
+          "pgrep -x sshd >/dev/null || { echo 'sshd 未能启动' >&2; exit 1; }",
+          "echo 'OpenSSH 已安装/启用。'"
+        ],
+        "rhel": [
+          "$SUDO dnf install -y openssh-server",
+          "$SUDO systemctl enable --now sshd",
+          "echo 'OpenSSH 已安装/启用。'"
+        ],
+        "darwin": [
+          "echo 'macOS 可用系统设置 → 通用 → 共享 → 远程登录启用 SSH'",
+          "sudo systemsetup -setremotelogin on 2>/dev/null || true"
+        ],
+        "windows": [
+          "Install-Pkg 'Microsoft.OpenSSH.Beta' 'openssh'",
+          "try { Start-Service sshd -ErrorAction SilentlyContinue; Set-Service -Name sshd -StartupType Automatic -ErrorAction SilentlyContinue } catch {}",
+          "Write-Host 'OpenSSH 已安装/尝试启动'"
+        ]
+      },
+      "docker_image": "linuxserver/openssh-server:latest",
+      "env_vars": [],
+      "agent_templates": [
+        {
+          "id": "ssh-check",
+          "name": "检查 SSH",
+          "name_en": "Check SSH",
+          "command": [
+            "sh",
+            "-c",
+            "command -v sshd; ss -ltn 2>/dev/null | grep ':22' || true; echo OK"
+          ],
+          "command_windows": [
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            "Get-Service sshd | Format-List"
+          ],
+          "env": {},
+          "work_dir": "~"
+        }
+      ]
+    },
+    {
+      "id": "zh-locale",
+      "name": "中文语言包 / 输入法",
+      "name_en": "Chinese locale & IME",
+      "category": "base",
+      "icon": "lang",
+      "color": "#F59E0B",
+      "languages": [
+        "locale"
+      ],
+      "description": "简体中文语言包、字体与 fcitx5/ibus 拼音输入法（桌面环境更完整）。",
+      "description_en": "Simplified Chinese locale, fonts, and fcitx5/ibus Pinyin IME for a complete desktop experience.",
+      "homepage": "https://fcitx-im.org/",
+      "sources": [
+        "https://packages.debian.org/language-pack-zh-hans",
+        "https://fcitx-im.org/",
+        "https://github.com/ibus/ibus"
+      ],
+      "detect": {
+        "posix": "locale -a 2>/dev/null | grep -qi 'zh_CN' && (command -v fcitx5 >/dev/null || command -v fcitx >/dev/null || command -v ibus >/dev/null || fc-list :lang=zh 2>/dev/null | head -1 | grep -q .)",
+        "windows": "Get-WinUserLanguageList | Where-Object { $_.LanguageTag -like 'zh*' } | Out-Null; if (-not $?) { exit 1 }; 'zh OK'"
+      },
+      "setup": {
+        "linux": [
+          "$SUDO apt-get update -y",
+          "$SUDO apt-get install -y --no-install-recommends language-pack-zh-hans fonts-noto-cjk fonts-wqy-zenhei 2>/dev/null || $SUDO apt-get install -y --no-install-recommends fonts-noto-cjk || true",
+          "$SUDO apt-get install -y --no-install-recommends fcitx5 fcitx5-chinese-addons fcitx5-frontend-gtk3 fcitx5-frontend-gtk4 2>/dev/null || $SUDO apt-get install -y --no-install-recommends ibus ibus-libpinyin || true",
+          "$SUDO locale-gen zh_CN.UTF-8 2>/dev/null || true",
+          "$SUDO update-locale LANG=zh_CN.UTF-8 2>/dev/null || true",
+          "echo '中文语言包/输入法已安装（若桌面已运行请重新登录会话）。'"
+        ],
+        "alpine": [
+          "$SUDO apk add --no-cache musl-locales font-noto-cjk fcitx5 fcitx5-chinese-addons 2>/dev/null || $SUDO apk add --no-cache font-noto-cjk",
+          "echo '中文组件已安装。'"
+        ],
+        "rhel": [
+          "$SUDO dnf install -y glibc-langpack-zh langpacks-zh_CN google-noto-sans-cjk-fonts 2>/dev/null || $SUDO dnf install -y langpacks-zh_CN",
+          "$SUDO dnf install -y ibus ibus-libpinyin 2>/dev/null || true",
+          "echo '中文语言包/输入法已安装。'"
+        ],
+        "darwin": [
+          "echo '请在 系统设置 → 键盘 → 输入法 中添加「简体拼音」。'",
+          "true"
+        ],
+        "windows": [
+          "try { $list = Get-WinUserLanguageList; $zh = New-WinUserLanguageList zh-CN; Set-WinUserLanguageList ($zh + $list) -Force; Write-Host '已添加 zh-CN 语言' } catch { Write-Host '请在设置 → 时间和语言 中添加中文' }"
+        ]
+      },
+      "docker_image": "ubuntu:24.04",
+      "env_vars": [],
+      "agent_templates": [
+        {
+          "id": "zh-check",
+          "name": "检查中文环境",
+          "name_en": "Check Chinese locale",
+          "command": [
+            "sh",
+            "-c",
+            "locale -a | grep -i zh || true; fc-list :lang=zh 2>/dev/null | head -3; echo OK"
+          ],
+          "command_windows": [
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            "Get-WinUserLanguageList | Format-Table"
+          ],
+          "env": {},
+          "work_dir": "~"
+        }
+      ]
+    },
+    {
+      "id": "chromium",
+      "name": "Chromium 浏览器",
+      "name_en": "Chromium browser",
+      "category": "base",
+      "icon": "browser",
+      "color": "#4285F4",
+      "languages": [
+        "browser"
+      ],
+      "description": "系统 Chromium 浏览器，供桌面环境浏览网页（与 Playwright 沙箱浏览器不同）。",
+      "description_en": "System Chromium browser for desktop browsing (distinct from Playwright sandboxed browsers).",
+      "homepage": "https://www.chromium.org/",
+      "sources": [
+        "https://packages.debian.org/chromium",
+        "https://www.chromium.org/getting-involved/download-chromium/"
+      ],
+      "detect": {
+        "posix": "command -v chromium >/dev/null || command -v chromium-browser >/dev/null || command -v google-chrome >/dev/null || command -v google-chrome-stable >/dev/null",
+        "windows": "Get-Command chrome,msedge,chromium -ErrorAction SilentlyContinue | Select-Object -First 1 | Out-Null; if (-not $?) { $p=@(\"$env:ProgramFiles\\Google\\Chrome\\Application\\chrome.exe\",\"$env:ProgramFiles (x86)\\Microsoft\\Edge\\Application\\msedge.exe\"); if (-not ($p | Where-Object { Test-Path $_ })) { exit 1 } }; 'browser OK'"
+      },
+      "setup": {
+        "linux": [
+          "$SUDO apt-get update -y",
+          "$SUDO apt-get install -y --no-install-recommends chromium 2>/dev/null || $SUDO apt-get install -y --no-install-recommends chromium-browser 2>/dev/null || $SUDO snap install chromium 2>/dev/null || { echo '请手动安装 Chromium' >&2; exit 1; }",
+          "echo 'Chromium 已安装。'"
+        ],
+        "alpine": [
+          "$SUDO apk add --no-cache chromium",
+          "echo 'Chromium 已安装。'"
+        ],
+        "rhel": [
+          "$SUDO dnf install -y chromium 2>/dev/null || $SUDO dnf install -y chromium-browser",
+          "echo 'Chromium 已安装。'"
+        ],
+        "darwin": [
+          "brew install --cask chromium || brew install --cask google-chrome"
+        ],
+        "windows": [
+          "Install-Pkg 'Chromium.Chromium' 'chromium'"
+        ]
+      },
+      "docker_image": "browserless/chrome:latest",
+      "env_vars": [],
+      "agent_templates": [
+        {
+          "id": "chromium-version",
+          "name": "查看 Chromium 版本",
+          "name_en": "Chromium version",
+          "command": [
+            "sh",
+            "-c",
+            "chromium --version 2>/dev/null || chromium-browser --version 2>/dev/null || google-chrome --version"
+          ],
+          "command_windows": [
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            "Get-Command chrome,msedge -EA SilentlyContinue | Format-Table"
+          ],
+          "env": {},
+          "work_dir": "~"
+        }
+      ]
+    },
+    {
+      "id": "python",
+      "name": "Python",
+      "name_en": "Python",
+      "category": "base",
+      "icon": "python",
+      "color": "#3776AB",
+      "languages": [
+        "python"
+      ],
+      "description": "Python 3 解释器、pip 与 venv。",
+      "description_en": "Python 3 interpreter with pip and venv.",
+      "homepage": "https://www.python.org/",
+      "sources": [
+        "https://packages.debian.org/python3",
+        "https://winget.run/pkg/Python/Python.3.12",
+        "https://community.chocolatey.org/packages/python3"
+      ],
+      "detect": {
+        "posix": "python3 --version 2>&1 || python --version 2>&1",
+        "windows": "python --version"
+      },
+      "setup": {
+        "linux": [
+          "$SUDO apt-get update -y && $SUDO apt-get install -y --no-install-recommends python3 python3-pip python3-venv"
+        ],
+        "alpine": [
+          "$SUDO apk add --no-cache python3 py3-pip"
+        ],
+        "rhel": [
+          "$SUDO dnf install -y python3 python3-pip"
+        ],
+        "darwin": [
+          "brew install python"
+        ],
+        "windows": [
+          "Install-Pkg 'Python.Python.3.12' 'python3'"
+        ]
+      },
+      "docker_image": "python:3.12-slim",
+      "env_vars": [],
+      "agent_templates": [
+        {
+          "id": "python-script",
+          "name": "Python 脚本",
+          "name_en": "Python script",
+          "command": [
+            "python3",
+            "main.py"
+          ],
+          "command_windows": [
+            "python",
+            "main.py"
+          ],
+          "env": {
+            "PYTHONUNBUFFERED": "1"
+          },
+          "work_dir": "~/agents/python"
+        }
+      ]
+    },
+    {
+      "id": "node",
+      "name": "Node.js",
+      "name_en": "Node.js",
+      "category": "base",
+      "icon": "node",
+      "color": "#5FA04E",
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "description": "Node.js LTS 运行时与 npm。",
+      "description_en": "Node.js LTS runtime with npm.",
+      "homepage": "https://nodejs.org/",
+      "sources": [
+        "https://packages.debian.org/nodejs",
+        "https://winget.run/pkg/OpenJS/NodeJS.LTS",
+        "https://community.chocolatey.org/packages/nodejs-lts"
+      ],
+      "detect": {
+        "posix": "node --version",
+        "windows": "node --version"
+      },
+      "setup": {
+        "linux": [
+          "$SUDO apt-get update -y && $SUDO apt-get install -y --no-install-recommends nodejs npm"
+        ],
+        "alpine": [
+          "$SUDO apk add --no-cache nodejs npm"
+        ],
+        "rhel": [
+          "$SUDO dnf install -y nodejs npm"
+        ],
+        "darwin": [
+          "brew install node"
+        ],
+        "windows": [
+          "Install-Pkg 'OpenJS.NodeJS.LTS' 'nodejs-lts'"
+        ]
+      },
+      "docker_image": "node:22-slim",
+      "env_vars": [],
+      "agent_templates": [
+        {
+          "id": "node-script",
+          "name": "Node.js 脚本",
+          "name_en": "Node.js script",
+          "command": [
+            "node",
+            "index.js"
+          ],
+          "env": {},
+          "work_dir": "~/agents/node"
+        }
+      ]
+    },
+    {
+      "id": "bun",
+      "name": "Bun",
+      "name_en": "Bun",
+      "category": "runtime",
+      "icon": "bun",
+      "color": "#F9F1E1",
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "description": "Bun：高速 JavaScript/TypeScript 运行时与包管理器。",
+      "description_en": "Bun: fast JavaScript/TypeScript runtime and package manager.",
+      "homepage": "https://bun.sh/",
+      "sources": [
+        "https://bun.sh/docs/installation",
+        "https://github.com/oven-sh/bun/blob/main/src/cli/install.ps1",
+        "https://winget.run/pkg/Oven-sh/Bun"
+      ],
+      "detect": {
+        "posix": "bun --version",
+        "windows": "bun --version"
+      },
+      "setup": {
+        "linux": [
+          "$SUDO apt-get update -y && $SUDO apt-get install -y --no-install-recommends curl ca-certificates unzip bash",
+          "curl -fsSL https://bun.sh/install | bash"
+        ],
+        "alpine": [
+          "$SUDO apk add --no-cache curl ca-certificates unzip bash libgcc libstdc++",
+          "curl -fsSL https://bun.sh/install | bash"
+        ],
+        "rhel": [
+          "$SUDO dnf install -y curl unzip bash",
+          "curl -fsSL https://bun.sh/install | bash"
+        ],
+        "darwin": [
+          "curl -fsSL https://bun.sh/install | bash"
+        ],
+        "windows": [
+          "if (-not (Try-Winget 'Oven-sh.Bun')) { irm https://bun.sh/install.ps1 | iex }"
+        ]
+      },
+      "docker_image": "oven/bun:1",
+      "env_vars": [],
+      "agent_templates": [
+        {
+          "id": "bun-script",
+          "name": "Bun 脚本",
+          "name_en": "Bun script",
+          "command": [
+            "bun",
+            "run",
+            "index.ts"
+          ],
+          "env": {},
+          "work_dir": "~/agents/bun"
+        }
+      ]
+    },
+    {
+      "id": "deno",
+      "name": "Deno",
+      "name_en": "Deno",
+      "category": "runtime",
+      "icon": "deno",
+      "color": "#000000",
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "description": "Deno：安全的 JavaScript/TypeScript 运行时。",
+      "description_en": "Deno: secure JavaScript/TypeScript runtime.",
+      "homepage": "https://deno.com/",
+      "sources": [
+        "https://docs.deno.com/runtime/getting_started/installation/",
+        "https://github.com/denoland/deno_install/blob/master/install.sh",
+        "https://community.chocolatey.org/packages/deno"
+      ],
+      "detect": {
+        "posix": "deno --version",
+        "windows": "deno --version"
+      },
+      "setup": {
+        "linux": [
+          "$SUDO apt-get update -y && $SUDO apt-get install -y --no-install-recommends curl ca-certificates unzip",
+          "curl -fsSL https://deno.land/install.sh | sh -s -- -y"
+        ],
+        "alpine": [
+          "$SUDO apk add --no-cache deno"
+        ],
+        "rhel": [
+          "$SUDO dnf install -y curl unzip",
+          "curl -fsSL https://deno.land/install.sh | sh -s -- -y"
+        ],
+        "darwin": [
+          "brew install deno"
+        ],
+        "windows": [
+          "Install-Pkg 'DenoLand.Deno' 'deno'"
+        ]
+      },
+      "docker_image": "denoland/deno:latest",
+      "env_vars": [],
+      "agent_templates": [
+        {
+          "id": "deno-script",
+          "name": "Deno 脚本",
+          "name_en": "Deno script",
+          "command": [
+            "deno",
+            "run",
+            "-A",
+            "main.ts"
+          ],
+          "env": {},
+          "work_dir": "~/agents/deno"
+        }
+      ]
+    },
+    {
+      "id": "go",
+      "name": "Go",
+      "name_en": "Go",
+      "category": "runtime",
+      "icon": "go",
+      "color": "#00ADD8",
+      "languages": [
+        "go"
+      ],
+      "description": "Go 编译器与工具链。",
+      "description_en": "Go compiler and toolchain.",
+      "homepage": "https://go.dev/",
+      "sources": [
+        "https://packages.debian.org/golang-go",
+        "https://winget.tulio.org/pkg/GoLang.Go/",
+        "https://community.chocolatey.org/packages/golang"
+      ],
+      "detect": {
+        "posix": "go version",
+        "windows": "go version"
+      },
+      "setup": {
+        "linux": [
+          "$SUDO apt-get update -y && $SUDO apt-get install -y --no-install-recommends golang-go ca-certificates git"
+        ],
+        "alpine": [
+          "$SUDO apk add --no-cache go git"
+        ],
+        "rhel": [
+          "$SUDO dnf install -y golang git"
+        ],
+        "darwin": [
+          "brew install go"
+        ],
+        "windows": [
+          "Install-Pkg 'GoLang.Go' 'golang'"
+        ]
+      },
+      "docker_image": "golang:1",
+      "env_vars": [],
+      "agent_templates": [
+        {
+          "id": "go-run",
+          "name": "Go 程序",
+          "name_en": "Go program",
+          "command": [
+            "go",
+            "run",
+            "."
+          ],
+          "env": {},
+          "work_dir": "~/agents/go"
+        }
+      ]
+    },
+    {
+      "id": "java",
+      "name": "Java (JDK 21)",
+      "name_en": "Java (JDK 21)",
+      "category": "runtime",
+      "icon": "java",
+      "color": "#E76F00",
+      "languages": [
+        "java",
+        "kotlin"
+      ],
+      "description": "OpenJDK / Eclipse Temurin JDK。",
+      "description_en": "OpenJDK / Eclipse Temurin JDK.",
+      "homepage": "https://adoptium.net/",
+      "sources": [
+        "https://packages.debian.org/default-jdk-headless",
+        "https://pkgs.alpinelinux.org/package/edge/community/x86_64/openjdk21",
+        "https://winget.ragerworks.com/package/EclipseAdoptium.Temurin.21.JDK",
+        "https://community.chocolatey.org/packages/temurin21"
+      ],
+      "detect": {
+        "posix": "java -version 2>&1",
+        "windows": "cmd /c \"java -version 2>&1\""
+      },
+      "setup": {
+        "linux": [
+          "$SUDO apt-get update -y && $SUDO apt-get install -y --no-install-recommends default-jdk-headless"
+        ],
+        "alpine": [
+          "$SUDO apk add --no-cache openjdk21"
+        ],
+        "rhel": [
+          "$SUDO dnf install -y java-21-openjdk-devel"
+        ],
+        "darwin": [
+          "brew install --cask temurin"
+        ],
+        "windows": [
+          "Install-Pkg 'EclipseAdoptium.Temurin.21.JDK' 'temurin21'"
+        ]
+      },
+      "docker_image": "eclipse-temurin:21-jdk",
+      "env_vars": [],
+      "agent_templates": [
+        {
+          "id": "java-jar",
+          "name": "Java 程序 (jar)",
+          "name_en": "Java program (jar)",
+          "command": [
+            "java",
+            "-jar",
+            "app.jar"
+          ],
+          "env": {},
+          "work_dir": "~/agents/java"
+        }
+      ]
+    },
+    {
+      "id": "dotnet",
+      "name": ".NET SDK",
+      "name_en": ".NET SDK",
+      "category": "runtime",
+      "icon": "dotnet",
+      "color": "#512BD4",
+      "languages": [
+        "csharp",
+        "fsharp"
+      ],
+      "description": ".NET 10 LTS SDK。",
+      "description_en": ".NET 10 LTS SDK.",
+      "homepage": "https://dotnet.microsoft.com/",
+      "sources": [
+        "https://learn.microsoft.com/dotnet/core/install/linux-ubuntu-install",
+        "https://learn.microsoft.com/dotnet/core/install/linux-alpine",
+        "https://learn.microsoft.com/dotnet/core/tools/dotnet-install-script",
+        "https://winstall.app/apps/Microsoft.DotNet.SDK.10"
+      ],
+      "detect": {
+        "posix": "dotnet --version",
+        "windows": "dotnet --version"
+      },
+      "setup": {
+        "linux": [
+          "$SUDO apt-get update -y && $SUDO apt-get install -y --no-install-recommends curl ca-certificates",
+          "if apt-cache show dotnet-sdk-10.0 >/dev/null 2>&1; then $SUDO apt-get install -y dotnet-sdk-10.0; else curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel LTS; fi"
+        ],
+        "alpine": [
+          "$SUDO apk add --no-cache dotnet10-sdk"
+        ],
+        "rhel": [
+          "$SUDO dnf install -y dotnet-sdk-10.0"
+        ],
+        "darwin": [
+          "brew install --cask dotnet-sdk"
+        ],
+        "windows": [
+          "if (-not (Try-Winget 'Microsoft.DotNet.SDK.10')) { & ([scriptblock]::Create((Invoke-RestMethod https://dot.net/v1/dotnet-install.ps1))) -Channel LTS }"
+        ]
+      },
+      "docker_image": "mcr.microsoft.com/dotnet/sdk:10.0",
+      "env_vars": [],
+      "agent_templates": [
+        {
+          "id": "dotnet-run",
+          "name": ".NET 程序",
+          "name_en": ".NET program",
+          "command": [
+            "dotnet",
+            "run"
+          ],
+          "env": {
+            "DOTNET_CLI_TELEMETRY_OPTOUT": "1"
+          },
+          "work_dir": "~/agents/dotnet"
+        }
+      ]
+    },
+    {
+      "id": "rust",
+      "name": "Rust",
+      "name_en": "Rust",
+      "category": "runtime",
+      "icon": "rust",
+      "color": "#000000",
+      "languages": [
+        "rust"
+      ],
+      "description": "rustup + 稳定版 Rust 工具链（cargo、rustc）。",
+      "description_en": "rustup with the stable Rust toolchain (cargo, rustc).",
+      "homepage": "https://www.rust-lang.org/",
+      "sources": [
+        "https://rustup.rs/",
+        "https://wingetly.io/apps/rustlang/rustup",
+        "https://community.chocolatey.org/packages/rustup.install"
+      ],
+      "detect": {
+        "posix": "cargo --version",
+        "windows": "cargo --version"
+      },
+      "setup": {
+        "linux": [
+          "$SUDO apt-get update -y && $SUDO apt-get install -y --no-install-recommends curl ca-certificates build-essential",
+          "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
+        ],
+        "alpine": [
+          "$SUDO apk add --no-cache curl ca-certificates gcc musl-dev",
+          "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
+        ],
+        "rhel": [
+          "$SUDO dnf install -y curl gcc",
+          "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
+        ],
+        "darwin": [
+          "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
+        ],
+        "windows": [
+          "Install-Pkg 'Rustlang.Rustup' 'rustup.install'",
+          "rustup default stable"
+        ]
+      },
+      "docker_image": "rust:1",
+      "env_vars": [],
+      "agent_templates": [
+        {
+          "id": "cargo-run",
+          "name": "Rust 程序",
+          "name_en": "Rust program",
+          "command": [
+            "cargo",
+            "run",
+            "--release"
+          ],
+          "env": {},
+          "work_dir": "~/agents/rust"
+        }
+      ]
+    },
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "name_en": "Claude Code",
+      "category": "agent",
+      "icon": "claude",
+      "color": "#D97757",
+      "languages": [
+        "agent"
+      ],
+      "description": "Anthropic 官方命令行编码智能体（原生安装器，无需 Node.js）。",
+      "description_en": "Anthropic's agentic coding CLI (native installer, no Node.js required).",
+      "homepage": "https://code.claude.com/docs/en/setup",
+      "sources": [
+        "https://code.claude.com/docs/en/setup",
+        "https://github.com/anthropics/claude-code/blob/HEAD/README.md",
+        "https://www.npmjs.com/package/@anthropic-ai/claude-code"
+      ],
+      "detect": {
+        "posix": "claude --version",
+        "windows": "claude --version"
+      },
+      "setup": {
+        "linux": [
+          "command -v curl >/dev/null 2>&1 || { $SUDO apt-get update -y && $SUDO apt-get install -y --no-install-recommends curl ca-certificates; }",
+          "curl -fsSL https://claude.ai/install.sh | bash"
+        ],
+        "alpine": [
+          "$SUDO apk add --no-cache bash curl ca-certificates libgcc libstdc++ ripgrep",
+          "curl -fsSL https://claude.ai/install.sh | bash"
+        ],
+        "rhel": [
+          "command -v curl >/dev/null 2>&1 || $SUDO dnf install -y curl",
+          "curl -fsSL https://claude.ai/install.sh | bash"
+        ],
+        "darwin": [
+          "curl -fsSL https://claude.ai/install.sh | bash"
+        ],
+        "windows": [
+          "try { irm https://claude.ai/install.ps1 | iex } catch { if (-not (Try-Winget 'Anthropic.ClaudeCode')) { throw } }"
+        ]
+      },
+      "docker_image": "node:22-slim",
+      "env_vars": [
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "description": "Anthropic API 密钥（也可在终端中执行 claude 登录订阅账号）",
+          "description_en": "Anthropic API key (or log in interactively with `claude`)",
+          "secret": true,
+          "required": false
+        }
+      ],
+      "notes": "npm 包 @anthropic-ai/claude-code 已被官方标记为弃用（仍可用，需 Node.js 22+）；此处使用官方原生安装器。",
+      "agent_templates": [
+        {
+          "id": "claude-code",
+          "name": "Claude Code",
+          "name_en": "Claude Code",
+          "command": [
+            "claude"
+          ],
+          "env": {
+            "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}"
+          },
+          "work_dir": "~/workspace",
+          "tty": true
+        },
+        {
+          "id": "claude-code-auto",
+          "name": "Claude Code（跳过权限确认）",
+          "name_en": "Claude Code (skip permissions)",
+          "command": [
+            "claude",
+            "--dangerously-skip-permissions"
+          ],
+          "env": {
+            "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}"
+          },
+          "work_dir": "~/workspace",
+          "tty": true
+        }
+      ]
+    },
+    {
+      "id": "openai-codex-cli",
+      "name": "OpenAI Codex CLI",
+      "name_en": "OpenAI Codex CLI",
+      "category": "agent",
+      "icon": "openai",
+      "color": "#10A37F",
+      "languages": [
+        "agent"
+      ],
+      "requires": [
+        "node"
+      ],
+      "description": "OpenAI 官方命令行编码智能体。",
+      "description_en": "OpenAI's coding agent CLI.",
+      "homepage": "https://developers.openai.com/codex/cli",
+      "sources": [
+        "https://www.npmjs.com/package/@openai/codex",
+        "https://github.com/openai/codex/blob/main/docs/install.md"
+      ],
+      "detect": {
+        "posix": "codex --version",
+        "windows": "codex --version"
+      },
+      "setup": {
+        "linux": [
+          "npm_global @openai/codex"
+        ],
+        "alpine": [
+          "npm_global @openai/codex"
+        ],
+        "rhel": [
+          "npm_global @openai/codex"
+        ],
+        "darwin": [
+          "brew install --cask codex"
+        ],
+        "windows": [
+          "npm install -g @openai/codex"
+        ]
+      },
+      "docker_image": "node:22-slim",
+      "env_vars": [
+        {
+          "name": "OPENAI_API_KEY",
+          "description": "OpenAI API 密钥（也可执行 codex 用 ChatGPT 账号登录）",
+          "description_en": "OpenAI API key (or sign in with ChatGPT via `codex`)",
+          "secret": true,
+          "required": false
+        }
+      ],
+      "agent_templates": [
+        {
+          "id": "openai-codex-cli",
+          "name": "OpenAI Codex CLI",
+          "name_en": "OpenAI Codex CLI",
+          "command": [
+            "codex"
+          ],
+          "env": {
+            "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+          },
+          "work_dir": "~/workspace",
+          "tty": true
+        },
+        {
+          "id": "openai-codex-cli-auto",
+          "name": "Codex（全自动模式）",
+          "name_en": "Codex (full-auto)",
+          "command": [
+            "codex",
+            "--full-auto"
+          ],
+          "env": {
+            "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+          },
+          "work_dir": "~/workspace",
+          "tty": true
+        }
+      ]
+    },
+    {
+      "id": "gemini-cli",
+      "name": "Gemini CLI",
+      "name_en": "Gemini CLI",
+      "category": "agent",
+      "icon": "gemini",
+      "color": "#4285F4",
+      "languages": [
+        "agent"
+      ],
+      "requires": [
+        "node"
+      ],
+      "description": "Google 官方开源命令行智能体。",
+      "description_en": "Google's open-source AI agent for the terminal.",
+      "homepage": "https://geminicli.com/",
+      "sources": [
+        "https://geminicli.com/docs/get-started/installation/",
+        "https://www.npmjs.com/package/@google/gemini-cli",
+        "https://github.com/google-gemini/gemini-cli/blob/main/docs/get-started/authentication.mdx"
+      ],
+      "detect": {
+        "posix": "gemini --version",
+        "windows": "gemini --version"
+      },
+      "setup": {
+        "linux": [
+          "npm_global @google/gemini-cli"
+        ],
+        "alpine": [
+          "npm_global @google/gemini-cli"
+        ],
+        "rhel": [
+          "npm_global @google/gemini-cli"
+        ],
+        "darwin": [
+          "brew install gemini-cli"
+        ],
+        "windows": [
+          "npm install -g @google/gemini-cli"
+        ]
+      },
+      "docker_image": "node:22-slim",
+      "env_vars": [
+        {
+          "name": "GEMINI_API_KEY",
+          "description": "Gemini API 密钥（https://aistudio.google.com/apikey）",
+          "description_en": "Gemini API key (https://aistudio.google.com/apikey)",
+          "secret": true,
+          "required": false
+        }
+      ],
+      "agent_templates": [
+        {
+          "id": "gemini-cli",
+          "name": "Gemini CLI",
+          "name_en": "Gemini CLI",
+          "command": [
+            "gemini"
+          ],
+          "env": {
+            "GEMINI_API_KEY": "${GEMINI_API_KEY}"
+          },
+          "work_dir": "~/workspace",
+          "tty": true
+        },
+        {
+          "id": "gemini-cli-yolo",
+          "name": "Gemini CLI（YOLO 自动批准）",
+          "name_en": "Gemini CLI (YOLO)",
+          "command": [
+            "gemini",
+            "--yolo"
+          ],
+          "env": {
+            "GEMINI_API_KEY": "${GEMINI_API_KEY}"
+          },
+          "work_dir": "~/workspace",
+          "tty": true
+        }
+      ]
+    },
+    {
+      "id": "aider",
+      "name": "Aider",
+      "name_en": "Aider",
+      "category": "agent",
+      "icon": "aider",
+      "color": "#14B014",
+      "languages": [
+        "agent"
+      ],
+      "description": "终端中的 AI 结对编程工具（通过 uv 安装 aider-chat，自动准备 Python 3.12）。",
+      "description_en": "AI pair programming in your terminal (aider-chat installed via uv, Python 3.12 managed automatically).",
+      "homepage": "https://aider.chat/",
+      "sources": [
+        "https://aider.chat/docs/install.html",
+        "https://pypi.org/project/aider-install/",
+        "https://docs.astral.sh/uv/getting-started/installation/"
+      ],
+      "detect": {
+        "posix": "aider --version",
+        "windows": "aider --version"
+      },
+      "setup": {
+        "linux": [
+          "ensure_uv",
+          "uv tool install --force --python python3.12 --with pip aider-chat@latest"
+        ],
+        "alpine": [
+          "ensure_uv",
+          "uv tool install --force --python python3.12 --with pip aider-chat@latest"
+        ],
+        "rhel": [
+          "ensure_uv",
+          "uv tool install --force --python python3.12 --with pip aider-chat@latest"
+        ],
+        "darwin": [
+          "ensure_uv",
+          "uv tool install --force --python python3.12 --with pip aider-chat@latest"
+        ],
+        "windows": [
+          "Ensure-Uv",
+          "uv tool install --force --python python3.12 --with pip aider-chat@latest"
+        ]
+      },
+      "docker_image": "paulgauthier/aider",
+      "env_vars": [
+        {
+          "name": "OPENAI_API_KEY",
+          "description": "OpenAI API 密钥（任选其一）",
+          "description_en": "OpenAI API key (one of)",
+          "secret": true,
+          "required": false
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "description": "Anthropic API 密钥（任选其一）",
+          "description_en": "Anthropic API key (one of)",
+          "secret": true,
+          "required": false
+        }
+      ],
+      "agent_templates": [
+        {
+          "id": "aider",
+          "name": "Aider",
+          "name_en": "Aider",
+          "command": [
+            "aider"
+          ],
+          "env": {},
+          "work_dir": "~/workspace",
+          "tty": true
+        }
+      ]
+    },
+    {
+      "id": "browser-use",
+      "name": "Browser Use + Playwright",
+      "name_en": "Browser Use + Playwright",
+      "category": "agent",
+      "icon": "browser",
+      "color": "#FF6B00",
+      "languages": [
+        "python",
+        "agent"
+      ],
+      "description": "浏览器自动化智能体：browser-use + Playwright Chromium（独立 venv：~/.agentos/venvs/browser-use）。",
+      "description_en": "Browser automation agent: browser-use + Playwright Chromium (dedicated venv at ~/.agentos/venvs/browser-use).",
+      "homepage": "https://docs.browser-use.com/",
+      "sources": [
+        "https://docs.browser-use.com/open-source/quickstart",
+        "https://github.com/browser-use/browser-use",
+        "https://playwright.dev/python/docs/browsers"
+      ],
+      "detect": {
+        "posix": "\"$HOME/.agentos/venvs/browser-use/bin/python\" -c 'import importlib.metadata as m; print(\"browser-use\", m.version(\"browser-use\"))'",
+        "windows": "& \"$env:USERPROFILE\\.agentos\\venvs\\browser-use\\Scripts\\python.exe\" -c \"import importlib.metadata as m; print(m.version('browser-use'))\""
+      },
+      "setup": {
+        "linux": [
+          "ensure_uv",
+          "uv venv --allow-existing --python 3.12 \"$HOME/.agentos/venvs/browser-use\"",
+          "uv pip install --python \"$HOME/.agentos/venvs/browser-use/bin/python\" -U browser-use playwright",
+          "if [ \"$(id -u)\" = \"0\" ] || sudo -n true 2>/dev/null; then \"$HOME/.agentos/venvs/browser-use/bin/python\" -m playwright install --with-deps chromium; else echo \"警告：无 root/免密 sudo，跳过系统依赖安装\" >&2; \"$HOME/.agentos/venvs/browser-use/bin/python\" -m playwright install chromium; fi"
+        ],
+        "rhel": [
+          "ensure_uv",
+          "uv venv --allow-existing --python 3.12 \"$HOME/.agentos/venvs/browser-use\"",
+          "uv pip install --python \"$HOME/.agentos/venvs/browser-use/bin/python\" -U browser-use playwright",
+          "if [ \"$(id -u)\" = \"0\" ] || sudo -n true 2>/dev/null; then \"$HOME/.agentos/venvs/browser-use/bin/python\" -m playwright install --with-deps chromium; else echo \"警告：无 root/免密 sudo，跳过系统依赖安装\" >&2; \"$HOME/.agentos/venvs/browser-use/bin/python\" -m playwright install chromium; fi"
+        ],
+        "darwin": [
+          "ensure_uv",
+          "uv venv --allow-existing --python 3.12 \"$HOME/.agentos/venvs/browser-use\"",
+          "uv pip install --python \"$HOME/.agentos/venvs/browser-use/bin/python\" -U browser-use playwright",
+          "\"$HOME/.agentos/venvs/browser-use/bin/python\" -m playwright install chromium"
+        ],
+        "alpine": [
+          "$SUDO apk add --no-cache chromium",
+          "ensure_uv",
+          "uv venv --allow-existing --python 3.12 \"$HOME/.agentos/venvs/browser-use\"",
+          "uv pip install --python \"$HOME/.agentos/venvs/browser-use/bin/python\" -U browser-use"
+        ],
+        "windows": [
+          "Ensure-Uv",
+          "uv venv --allow-existing --python 3.12 \"$env:USERPROFILE\\.agentos\\venvs\\browser-use\"",
+          "uv pip install --python \"$env:USERPROFILE\\.agentos\\venvs\\browser-use\\Scripts\\python.exe\" -U browser-use playwright",
+          "& \"$env:USERPROFILE\\.agentos\\venvs\\browser-use\\Scripts\\python.exe\" -m playwright install chromium"
+        ]
+      },
+      "docker_image": "python:3.12-slim",
+      "env_vars": [
+        {
+          "name": "OPENAI_API_KEY",
+          "description": "LLM 提供方 API 密钥（示例用 OpenAI）",
+          "description_en": "LLM provider API key (OpenAI in the example)",
+          "secret": true,
+          "required": false
+        },
+        {
+          "name": "BROWSER_USE_API_KEY",
+          "description": "Browser Use 云端模型/云浏览器密钥（可选）",
+          "description_en": "Browser Use cloud key (optional)",
+          "secret": true,
+          "required": false
+        }
+      ],
+      "notes": "Alpine (musl) 不受 Playwright 官方支持，改用系统 chromium。",
+      "agent_templates": [
+        {
+          "id": "browser-use-agent",
+          "name": "Browser Use 智能体",
+          "name_en": "Browser Use agent",
+          "command": [
+            "sh",
+            "-c",
+            "exec \"$HOME/.agentos/venvs/browser-use/bin/python\" agent.py"
+          ],
+          "command_windows": [
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            "& \"$env:USERPROFILE\\.agentos\\venvs\\browser-use\\Scripts\\python.exe\" agent.py"
+          ],
+          "env": {
+            "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+            "PYTHONUNBUFFERED": "1"
+          },
+          "work_dir": "~/agents/browser-use"
+        }
+      ]
+    },
+    {
+      "id": "openhands",
+      "name": "OpenHands",
+      "name_en": "OpenHands",
+      "category": "agent",
+      "icon": "openhands",
+      "color": "#8B5CF6",
+      "languages": [
+        "agent"
+      ],
+      "description": "开源 AI 软件开发智能体平台（依赖 Docker；openhands serve 在 3000 端口提供 Web 界面）。",
+      "description_en": "Open-source AI software development agent platform (needs Docker; `openhands serve` exposes a web UI on :3000).",
+      "homepage": "https://docs.openhands.dev/",
+      "sources": [
+        "https://docs.openhands.dev/openhands/usage/run-openhands/local-setup"
+      ],
+      "detect": {
+        "posix": "uv tool list 2>/dev/null | grep -E '^openhands '",
+        "windows": "$o = uv tool list | Select-String '^openhands '; if (-not $o) { exit 1 }; $o.Line"
+      },
+      "setup": {
+        "linux": [
+          "command -v docker >/dev/null 2>&1 || { echo 'OpenHands 需要 Docker：请先在该环境安装 Docker 并确保当前用户可访问 docker.sock' >&2; exit 1; }",
+          "ensure_uv",
+          "uv tool install openhands --python 3.12"
+        ],
+        "alpine": [
+          "command -v docker >/dev/null 2>&1 || { echo 'OpenHands 需要 Docker：请先在该环境安装 Docker 并确保当前用户可访问 docker.sock' >&2; exit 1; }",
+          "ensure_uv",
+          "uv tool install openhands --python 3.12"
+        ],
+        "rhel": [
+          "command -v docker >/dev/null 2>&1 || { echo 'OpenHands 需要 Docker：请先在该环境安装 Docker 并确保当前用户可访问 docker.sock' >&2; exit 1; }",
+          "ensure_uv",
+          "uv tool install openhands --python 3.12"
+        ],
+        "darwin": [
+          "command -v docker >/dev/null 2>&1 || { echo 'OpenHands 需要 Docker：请先在该环境安装 Docker 并确保当前用户可访问 docker.sock' >&2; exit 1; }",
+          "ensure_uv",
+          "uv tool install openhands --python 3.12"
+        ],
+        "windows": [
+          "if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'OpenHands 需要 Docker Desktop（WSL 2 后端）' }",
+          "Ensure-Uv",
+          "uv tool install openhands --python 3.12"
+        ]
+      },
+      "docker_image": "docker.openhands.dev/openhands/openhands:1.8",
+      "env_vars": [],
+      "notes": "LLM 提供方与 API 密钥在 OpenHands Web 界面 Settings 中配置。Windows 官方推荐在 WSL 中运行。",
+      "agent_templates": [
+        {
+          "id": "openhands-serve",
+          "name": "OpenHands Web 服务",
+          "name_en": "OpenHands web server",
+          "command": [
+            "openhands",
+            "serve"
+          ],
+          "env": {},
+          "work_dir": "~/workspace",
+          "ports": [
+            3000
+          ]
+        }
+      ]
+    }
+  ]
+}

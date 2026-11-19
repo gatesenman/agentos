@@ -1,0 +1,22 @@
+# systemd unit for a remote AgentOS node. Module M8.
+# Configure /etc/default/agentos-node:
+#   AGENTOS_SERVER=http://192.168.1.10:7800
+#   AGENTOS_TOKEN=<node token from the console settings page>
+#   AGENTOS_NODE_NAME=my-box
+[Unit]
+Description=AgentOS node (agent host)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/default/agentos-node
+ExecStart=/usr/local/bin/agentos node --data /var/lib/agentos/node
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=30
+User=root
+
+[Install]
+WantedBy=multi-user.target
