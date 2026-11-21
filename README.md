@@ -46,11 +46,22 @@ make
 
 ## 文档
 
-- [源码 README](README.original.md)
+- [REST API](docs/api.md)
+- [Server⇄Node 协议](docs/protocol.md)
+- [模块划分](docs/modules.md)
+- [docs/local-vms.md](docs/local-vms.md)
 - [模块说明](docs/modules.md)
 - [API](docs/api.md)
 - [本地虚拟机](docs/local-vms.md)
 - [桌面端](cmd/agentos-desktop/README.md)
+
+## 贡献
+
+欢迎通过 Issue 和 Pull Request 参与，详见 [CONTRIBUTING.md](CONTRIBUTING.md)。安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。参与时请遵守 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
+
+## 许可证
+
+本仓库尚未附带 LICENSE 文件，许可证未指定。
 
 ---
 
@@ -104,9 +115,19 @@ See the docs below for modules and APIs.
 
 ## Documentation
 
-- [源码 README](README.original.md)
+- [REST API](docs/api.md)
+- [Server⇄Node 协议](docs/protocol.md)
+- [模块划分](docs/modules.md)
+- [docs/local-vms.md](docs/local-vms.md)
 - [模块说明](docs/modules.md)
 - [API](docs/api.md)
 - [本地虚拟机](docs/local-vms.md)
 - [桌面端](cmd/agentos-desktop/README.md)
 
+## Contributing
+
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Please report vulnerabilities privately via [SECURITY.md](SECURITY.md). This project follows [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+## License
+
+No LICENSE file is included in this repository; the license is unspecified.
