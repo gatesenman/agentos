@@ -4,9 +4,11 @@
 
 ## 界面截图
 
+以下为仓库已有的真实桌面界面。状态栏可见「模拟数据」和 `v0.2.0-mock`，因此这些图是**模拟/演示数据**，不是生产环境实况，也不是 Windows 安装包截图（本仓库没有 GitHub Release）。
+
 ![桌面深色界面](docs/screenshots/desktop-dark.png)
 
-*桌面深色界面 / Desktop, dark theme*
+*桌面深色界面（模拟数据） / Desktop, dark theme (mock data)*
 
 ![运行环境列表](docs/screenshots/desktop-envs.png)
 
@@ -73,9 +75,11 @@ make
 
 ## Screenshots
 
+These are existing real desktop captures. The status bar shows mock/demo data and `v0.2.0-mock`. They are not production telemetry and not Windows-installer shots (no GitHub Release).
+
 ![Desktop, dark theme](docs/screenshots/desktop-dark.png)
 
-*桌面深色界面 / Desktop, dark theme*
+*桌面深色界面（模拟数据） / Desktop, dark theme (mock data)*
 
 ![Environment list](docs/screenshots/desktop-envs.png)
 
